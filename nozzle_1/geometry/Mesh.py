@@ -546,7 +546,7 @@ inlet_1 = Mesh_1.GroupOnGeom(inlet,'inlet',SMESH.FACE)
 outletRight_1 = Mesh_1.GroupOnGeom(outletRight,'outletRight',SMESH.FACE)
 [ front_1, back_1, wall_1, outletTop_1, outletLeft_1, inlet_1, outletRight_1 ] = Mesh_1.GetGroups()
 try:
-  Mesh_1.ExportUNV( os.path.join(current_dir, 'geometry/Mesh.unv'), 0 )
+  Mesh_1.ExportUNV( os.path.join(current_dir, 'Mesh.unv'), 0 )
   pass
 except:
   print('ExportUNV() failed. Invalid file name?')
