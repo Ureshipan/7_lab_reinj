@@ -32,5 +32,5 @@ sed -i "26s/.*/   box (-${width} 0 -1) (0 ${height} 1);/" system/setFieldsDict
 setFields
 decomposePar
 mpirun -np 4 rhoPimpleFoam -parallel >log
-#reconstructPar
+reconstructPar
 #paraFoam
