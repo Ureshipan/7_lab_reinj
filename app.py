@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import threading
 import time
+from PIL import Image, ImageTk
 
 class NozzleCalculator:
     def __init__(self):
@@ -23,9 +24,17 @@ class NozzleCalculator:
         self.create_widgets()
         
     def create_widgets(self):
+        # Создаем основной контейнер для разделения на левую и правую части
+        self.main_container = ttk.Frame(self.root)
+        self.main_container.pack(fill="both", expand=True)
+        
+        # Левая часть с формой ввода
+        self.left_frame = ttk.Frame(self.main_container)
+        self.left_frame.pack(side="left", fill="both", expand=True, padx=20, pady=20)
+        
         # Создаем фрейм для формы ввода
-        self.input_frame = ttk.LabelFrame(self.root, text="Входные параметры", padding="20")
-        self.input_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self.input_frame = ttk.LabelFrame(self.left_frame, text="Входные параметры", padding="20")
+        self.input_frame.pack(fill="both", expand=True)
         
         # Создаем и размещаем поля ввода
         self.create_input_field("Давление воздуха Pe на входе в сопло (Па):", self.p_input, 0)
@@ -38,6 +47,21 @@ class NozzleCalculator:
         # Кнопка расчета
         self.calc_button = ttk.Button(self.input_frame, text="Расчет", command=self.start_calculation)
         self.calc_button.grid(row=6, column=0, columnspan=2, pady=20)
+        
+        # Правая часть с изображением
+        self.right_frame = ttk.Frame(self.main_container)
+        self.right_frame.pack(side="right", fill="both", expand=True, padx=20, pady=20)
+        
+        # Загрузка и отображение изображения
+        try:
+            self.image = Image.open("soplo.png")
+            # Изменяем размер изображения, сохраняя пропорции
+            self.image.thumbnail((400, 400))
+            self.photo = ImageTk.PhotoImage(self.image)
+            self.image_label = ttk.Label(self.right_frame, image=self.photo)
+            self.image_label.pack(pady=20)
+        except Exception as e:
+            print(f"Ошибка загрузки изображения: {e}")
         
         # Создаем фрейм для результатов
         self.result_frame = ttk.LabelFrame(self.root, text="Результаты расчета", padding="20")
@@ -94,6 +118,9 @@ class NozzleCalculator:
         self.stop_button.configure(state="normal")
         self.calculation_running = True
         
+        # Очищаем поле вывода перед началом нового расчета
+        self.result_text.delete(1.0, tk.END)
+        
         # Запускаем расчет в отдельном потоке
         self.calculation_thread = threading.Thread(target=self.run_calculation)
         self.calculation_thread.start()
@@ -115,8 +142,9 @@ class NozzleCalculator:
             if not self.calculation_running:
                 break
                 
-            self.result_text.delete(1.0, tk.END)
+            # Добавляем новый этап в конец текста
             self.result_text.insert(tk.END, f"Этап {i+1}/{len(stages)}: {stage}\n")
+            self.result_text.see(tk.END)  # Прокручиваем к последней строке
             self.progress["value"] = i + 1
             
             # Имитация работы
