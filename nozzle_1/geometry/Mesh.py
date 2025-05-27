@@ -7,12 +7,15 @@
 import sys
 import salome
 import math
+import os
 
 salome.salome_init()
 import salome_notebook
 notebook = salome_notebook.NoteBook()
-sys.path.insert(0, r'/home/mark/OpenFOAM/mark-12/run/nozzle_1/geometry')
 
+# Получаем путь к текущей директории скрипта
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
 
 # входные параметры
 P_input = 200000
@@ -543,7 +546,7 @@ inlet_1 = Mesh_1.GroupOnGeom(inlet,'inlet',SMESH.FACE)
 outletRight_1 = Mesh_1.GroupOnGeom(outletRight,'outletRight',SMESH.FACE)
 [ front_1, back_1, wall_1, outletTop_1, outletLeft_1, inlet_1, outletRight_1 ] = Mesh_1.GetGroups()
 try:
-  Mesh_1.ExportUNV( r'/home/mark/OpenFOAM/mark-12/run/nozzle_1/geometry/Mesh.unv', 0 )
+  Mesh_1.ExportUNV( os.path.join(current_dir, 'geometry/Mesh.unv'), 0 )
   pass
 except:
   print('ExportUNV() failed. Invalid file name?')
@@ -591,6 +594,6 @@ smesh.SetName(Sub_mesh_8, 'Sub-mesh_8')
 if salome.sg.hasDesktop():
   salome.sg.updateObjBrowser()
 # change params for setFields
-file = open("/home/mark/OpenFOAM/mark-12/run/nozzle_1/params.txt", "a")
+file = open(os.path.join(os.path.dirname(current_dir), "params.txt"), "a")
 file.write(f"width\n{l_left_/1000}\n\nheight\n{d_inlet_/2000}")
 file.close()

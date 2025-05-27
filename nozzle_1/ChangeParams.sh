@@ -1,6 +1,9 @@
 #!/bin/bash
 
-cd /home/mark/OpenFOAM/mark-12/run/nozzle_1
+# Получаем путь к текущей директории
+CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Чтение параметров из файла
 p_input=$(head -n 2 params.txt | tail -n 1)
 t_input=$(head -n 5 params.txt | tail -n -1)
 p_output=$(head -n 8 params.txt | tail -n 1)
@@ -15,10 +18,11 @@ echo G = $G
 echo alpha = $alpha
 echo betta = $betta
 
-sed -i "18s/.*/internalField   uniform ${p_output};/;25s/.*/value uniform ${p_input};/;36s/.*/ value uniform ${p_output};/" 0/p.org;
+# Используем относительные пути
+sed -i "18s/.*/internalField   uniform ${p_output};/;25s/.*/value uniform ${p_input};/;36s/.*/ value uniform ${p_output};/" 0/p.org
 
-sed -i "18s/.*/internalField   uniform ${t_input};/;25s/.*/        value           uniform ${t_input};/;36s/.*/        value           uniform ${t_input};/" 0/T;
+sed -i "18s/.*/internalField   uniform ${t_input};/;25s/.*/        value           uniform ${t_input};/;36s/.*/        value           uniform ${t_input};/" 0/T
 
-sed -i "19s/.*/    volScalarFieldValue p ${p_output}/;29s/.*/            volScalarFieldValue p ${p_input}/;" system/setFieldsDict;
+sed -i "19s/.*/    volScalarFieldValue p ${p_output}/;29s/.*/            volScalarFieldValue p ${p_input}/;" system/setFieldsDict
 
-sed -i "18s/.*/P_input = ${p_input}/;19s/.*/T_input = ${t_input}/;20s/.*/P_output = ${p_output}/;21s/.*/G = ${G}/;22s/.*/alpha_ = ${alpha}/;23s/.*/betta_ = ${betta}/" geometry/Mesh.py;
+sed -i "18s/.*/P_input = ${p_input}/;19s/.*/T_input = ${t_input}/;20s/.*/P_output = ${p_output}/;21s/.*/G = ${G}/;22s/.*/alpha_ = ${alpha}/;23s/.*/betta_ = ${betta}/" geometry/Mesh.py
