@@ -6,7 +6,7 @@ CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Запуск генерации сетки в Salome
 # Предполагаем, что SALOME установлен и доступен в PATH
 cd ~/programs/SALOME-9.14.0-native-UB24.04-SRC
-salome -t "$CURRENT_DIR/geometry/Mesh.py"
+./salome -t "$CURRENT_DIR/geometry/Mesh.py"
 
 # Импорт сетки в OpenFOAM
 cd "$CURRENT_DIR"
