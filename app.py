@@ -3,6 +3,9 @@ from tkinter import ttk
 import threading
 import time
 from PIL import Image, ImageTk
+import os
+import subprocess
+import shutil
 
 class NozzleCalculator:
     def __init__(self):
@@ -20,6 +23,9 @@ class NozzleCalculator:
         
         # Флаг для отслеживания состояния расчета
         self.calculation_running = False
+        
+        # Путь к папке с OpenFOAM
+        self.nozzle_path = os.path.join(os.getcwd(), "nozzle_1")
         
         self.create_widgets()
         
@@ -64,7 +70,7 @@ class NozzleCalculator:
             print(f"Ошибка загрузки изображения: {e}")
         
         # Создаем фрейм для результатов
-        self.result_frame = ttk.LabelFrame(self.root, text="Результаты расчета", padding="20")
+        self.result_frame = ttk.LabelFrame(self.root, text="Прогресс расчета", padding="20")
         self.result_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
         # Текстовое поле для вывода результатов
@@ -103,6 +109,38 @@ class NozzleCalculator:
         except ValueError:
             return False
             
+    def update_params_file(self):
+        """Обновляет файл params.txt с новыми значениями"""
+        params_content = f"""p_input
+{self.p_input.get()}
+
+t_input
+{self.t_input.get()}
+
+p_output
+{self.p_output.get()}
+
+G
+{self.g.get()}
+
+alpha
+{self.alpha.get()}
+
+betta
+{self.betta.get()}
+width
+"""
+        with open(os.path.join(self.nozzle_path, "params.txt"), "w") as f:
+            f.write(params_content)
+            
+    def run_command(self, command, shell=True):
+        """Выполняет команду и возвращает результат"""
+        try:
+            result = subprocess.run(command, shell=shell, capture_output=True, text=True)
+            return result.stdout, result.stderr
+        except Exception as e:
+            return "", str(e)
+            
     def start_calculation(self):
         # Проверяем все входные значения
         values = [self.p_input.get(), self.t_input.get(), self.p_output.get(),
@@ -126,50 +164,93 @@ class NozzleCalculator:
         self.calculation_thread.start()
         
     def run_calculation(self):
-        # Имитация этапов расчета
-        stages = [
-            "Инициализация расчета...",
-            "Подготовка геометрии...",
-            "Расчет сетки...",
-            "Решение уравнений...",
-            "Постобработка результатов..."
-        ]
-        
-        self.progress["maximum"] = len(stages)
-        self.progress["value"] = 0
-        
-        for i, stage in enumerate(stages):
+        try:
+            # Этап 1: Обновление параметров
+            self.result_text.insert(tk.END, "Этап 1/5: Обновление параметров...\n")
+            self.progress["value"] = 1
+            self.update_params_file()
+            
             if not self.calculation_running:
-                break
+                return
                 
-            # Добавляем новый этап в конец текста
-            self.result_text.insert(tk.END, f"Этап {i+1}/{len(stages)}: {stage}\n")
-            self.result_text.see(tk.END)  # Прокручиваем к последней строке
-            self.progress["value"] = i + 1
+            # Этап 2: Запуск ChangeParams.sh
+            self.result_text.insert(tk.END, "Этап 2/5: Применение параметров...\n")
+            self.progress["value"] = 2
+            stdout, stderr = self.run_command(f"cd {self.nozzle_path} && ./ChangeParams.sh")
+            if stderr:
+                self.result_text.insert(tk.END, f"Ошибка при применении параметров: {stderr}\n")
+                return
+                
+            if not self.calculation_running:
+                return
+                
+            # Этап 3: Запуск Run.sh
+            self.result_text.insert(tk.END, "Этап 3/5: Запуск расчета...\n")
+            self.progress["value"] = 3
+            stdout, stderr = self.run_command(f"cd {self.nozzle_path} && ./Run.sh")
+            if stderr:
+                self.result_text.insert(tk.END, f"Ошибка при запуске расчета: {stderr}\n")
+                return
+                
+            if not self.calculation_running:
+                return
+                
+            # Этап 4: Ожидание завершения расчета
+            self.result_text.insert(tk.END, "Этап 4/5: Ожидание завершения расчета...\n")
+            self.progress["value"] = 4
             
-            # Имитация работы
-            time.sleep(2)
+            # Проверяем наличие файла log
+            log_file = os.path.join(self.nozzle_path, "log")
+            while self.calculation_running:
+                if os.path.exists(log_file):
+                    with open(log_file, "r") as f:
+                        log_content = f.read()
+                        if "Finalising parallel run" in log_content:
+                            break
+                time.sleep(5)
+                
+            if not self.calculation_running:
+                return
+                
+            # Этап 5: Завершение
+            self.result_text.insert(tk.END, "Этап 5/5: Расчет завершен!\n")
+            self.progress["value"] = 5
             
-        if self.calculation_running:
-            self.result_text.insert(tk.END, "\nРасчет успешно завершен!")
+            # Активируем кнопки для просмотра результатов
             self.paraview_button.configure(state="normal")
             self.log_button.configure(state="normal")
             
-        self.calc_button.configure(state="normal")
-        self.stop_button.configure(state="disabled")
-        self.calculation_running = False
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Ошибка: {str(e)}\n")
+        finally:
+            self.calc_button.configure(state="normal")
+            self.stop_button.configure(state="disabled")
+            self.calculation_running = False
         
     def stop_calculation(self):
         self.calculation_running = False
         self.result_text.insert(tk.END, "\nРасчет остановлен пользователем")
         
     def open_paraview(self):
-        self.result_text.insert(tk.END, "\nОткрытие ParaView...")
-        # Здесь будет код для открытия ParaView
+        try:
+            subprocess.Popen(["paraFoam", "-case", self.nozzle_path])
+            self.result_text.insert(tk.END, "\nОткрытие ParaView...")
+        except Exception as e:
+            self.result_text.insert(tk.END, f"\nОшибка при открытии ParaView: {str(e)}")
         
     def open_log(self):
-        self.result_text.insert(tk.END, "\nОткрытие лог-файла...")
-        # Здесь будет код для открытия лог-файла
+        try:
+            log_file = os.path.join(self.nozzle_path, "log")
+            if os.path.exists(log_file):
+                if os.name == 'nt':  # Windows
+                    os.startfile(log_file)
+                else:  # Linux/Mac
+                    subprocess.Popen(["xdg-open", log_file])
+                self.result_text.insert(tk.END, "\nОткрытие лог-файла...")
+            else:
+                self.result_text.insert(tk.END, "\nЛог-файл не найден")
+        except Exception as e:
+            self.result_text.insert(tk.END, f"\nОшибка при открытии лог-файла: {str(e)}")
         
     def run(self):
         self.root.mainloop()
